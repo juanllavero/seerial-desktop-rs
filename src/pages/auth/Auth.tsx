@@ -4,11 +4,25 @@ import FlexBox from '../../components/ui/FlexBox'
 import { useAuth } from '../../context/auth.context'
 import { getToken } from '../../lib/auth'
 import Login from './components/Login'
+import { useEffect, useState } from 'react'
+import Loading from '../../components/Loading'
 
 function Auth() {
 	const navigate = useNavigate()
 	const { user } = useAuth()
-	const token = getToken()
+	const [loading, setLoading] = useState<boolean>(true)
+	const [token, setToken] = useState<string | undefined>(undefined)
+
+	useEffect(() => {
+		const loadToken = async () => {
+			setToken(await getToken())
+			setLoading(false)
+		}
+
+		loadToken()
+	}, [])
+
+	if (loading) return <Loading />
 
 	if (token || user) navigate('/')
 

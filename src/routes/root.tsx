@@ -40,6 +40,8 @@ function Root() {
 		}
 	}, [token])
 
+	console.log({ token, serverData })
+
 	if (loading) {
 		return (
 			<BaseLayout>

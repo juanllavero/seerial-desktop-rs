@@ -40,5 +40,10 @@
 			"digestAlgorithm": "sha256",
 			"timestampUrl": ""
 		}
+	},
+	"plugins": {
+		"store": {
+			"dir": "app"
+		}
 	}
 }

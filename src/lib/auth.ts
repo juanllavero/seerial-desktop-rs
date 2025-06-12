@@ -1,8 +1,10 @@
 import { User } from '../data/interfaces/Users'
 import { CENTRAL_SERVER } from '../utils/constants'
+import { getAuthStore } from './store'
 
-export function getToken(): string | null {
-	return localStorage.getItem('token')
+export async function getToken(): Promise<string | undefined> {
+	const store = await getAuthStore()
+	return await store.get<string>('token')
 }
 
 export async function getUser(): Promise<User | null> {

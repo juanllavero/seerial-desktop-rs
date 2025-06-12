@@ -26,14 +26,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
 	return (
 		<Sidebar collapsible='icon' {...props}>
-			<SidebarHeader></SidebarHeader>
+			<SidebarHeader>
+				<NavUser />
+			</SidebarHeader>
 			<SidebarContent>
 				<NavHomeButton />
 				<NavLibraries />
 			</SidebarContent>
 			<SidebarFooter>
 				<ServerSwitcher />
-				<NavUser />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>

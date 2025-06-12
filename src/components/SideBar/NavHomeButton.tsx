@@ -1,5 +1,3 @@
-import { t } from 'i18next'
-import { House } from 'lucide-react'
 import {
 	SidebarGroup,
 	SidebarMenu,
@@ -8,10 +6,15 @@ import {
 } from '../ui/sidebar'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
+import { HomeIcon } from '../ui/IconLibrary'
+import { useTranslation } from 'react-i18next'
+import { useServerStore } from '../../context/server.context'
 
 const NavHomeButton = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const location = useLocation()
+	const { selectedServer } = useServerStore()
 	const inHome = useMemo(
 		() => location.pathname.includes('/home'),
 		[location.pathname]
@@ -22,13 +25,15 @@ const NavHomeButton = () => {
 		inHome,
 	})
 
+	const navigateHome = () => {
+		if (selectedServer) navigate(`/server/${selectedServer.id}/home`)
+	}
+
 	const home = {
 		id: '0',
 		name: t('home'),
-		logo: House,
-		action: () => {
-			navigate('/home')
-		},
+		logo: HomeIcon,
+		action: navigateHome,
 	}
 
 	return (
@@ -43,17 +48,17 @@ const NavHomeButton = () => {
 							}`}
 							onClick={(e) => {
 								e.preventDefault()
-								navigate('/home')
+								navigateHome()
 							}}
 							style={{
-								color: inHome ? 'var(--app-color)' : '',
+								color: inHome ? 'var(--app-color)' : 'white',
 							}}
 						>
 							<home.logo />
 							<span
 								className='font-semibold'
 								style={{
-									color: inHome ? 'var(--app-color)' : '',
+									color: inHome ? 'var(--app-color)' : 'white',
 								}}
 							>
 								{home.name}

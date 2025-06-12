@@ -25,7 +25,6 @@ import {
 	Film,
 	MoreVertical,
 	Music,
-	Plus,
 	SearchIcon,
 	Trash2,
 	TvMinimal,
@@ -43,7 +42,7 @@ interface Item {
 export function NavLibraries() {
 	const navigate = useNavigate()
 
-	const { selectedServer, serverStatus, apiKeyStatus } = useServerStore()
+	const { selectedServer, serverStatus } = useServerStore()
 	const { selectedLibraryId, selectLibrary } = useDataStore()
 
 	const { data: libraries, isLoading } = useSWR<Library[]>(
@@ -173,30 +172,6 @@ export function NavLibraries() {
 							))}
 						</SidebarMenu>
 					</SidebarGroup>
-				</>
-			)}
-
-			{serverStatus && apiKeyStatus && (
-				<>
-					{/* Separator */}
-					<SidebarSeparator />
-					{/* Add Library */}
-					<SidebarGroup>
-						<SidebarMenu>
-							<SidebarMenuItem>
-								<SidebarMenuButton asChild onClick={() => {}}>
-									<a
-										href={''}
-										className='flex items-center gap-2'
-										onClick={(e) => e.preventDefault()}
-									>
-										<Plus />
-										<span>{t('libraryWindowTitle')}</span>
-									</a>
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-						</SidebarMenu>
-					</SidebarGroup>{' '}
 				</>
 			)}
 		</>

@@ -1,9 +1,5 @@
 import { AppSidebar } from '../components/SideBar/AppSidebar'
-import {
-	SidebarInset,
-	SidebarProvider,
-	SidebarTrigger,
-} from '../components/ui/sidebar'
+import { SidebarInset, SidebarProvider } from '../components/ui/sidebar'
 import { Outlet } from 'react-router-dom'
 
 const SideBarLayout = () => {
@@ -12,7 +8,7 @@ const SideBarLayout = () => {
 			<SidebarProvider>
 				<AppSidebar />
 				<SidebarInset>
-					<div className='h-screen'>
+					<div className='h-screen p-5'>
 						<Outlet />
 					</div>
 				</SidebarInset>

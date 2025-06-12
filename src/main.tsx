@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthProvider } from './context/auth.context'
+import './localization/i18n'
 import { updateAppLanguage } from './helpers/language_helpers'
 
 function App() {

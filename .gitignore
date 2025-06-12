@@ -15,6 +15,7 @@ dist-ssr
 *.dll
 *.lib
 
+.env
 package-lock.json
 
 # Editor directories and files

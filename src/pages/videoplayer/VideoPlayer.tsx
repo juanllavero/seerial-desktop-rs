@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 type Track = [number, string]
 
-export default function App() {
+export default function VideoPlayer() {
 	const [position, setPosition] = useState(0)
 	const [duration, setDuration] = useState(0)
 	const [volume, setVolume] = useState(100)

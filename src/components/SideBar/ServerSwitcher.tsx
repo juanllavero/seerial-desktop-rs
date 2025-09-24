@@ -78,7 +78,7 @@ export function ServerSwitcher() {
 						</DropdownMenuLabel>
 						{servers.map((server, index) => (
 							<DropdownMenuItem
-								key={server.ip + index}
+								key={server.id + index}
 								onClick={() => {
 									setActiveServer(server)
 									selectServer(server)

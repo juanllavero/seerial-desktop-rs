@@ -1,74 +1,81 @@
-import { Navigate, Outlet } from 'react-router-dom'
-import { memo, useEffect, useState } from 'react'
-import BaseLayout from '../layouts/BaseLayout'
-import { getToken, getUser } from '../lib/auth'
-import Loading from '../components/Loading'
-import NoServer from '../pages/noserver/NoServer'
-import { Server } from '../data/interfaces/Users'
+import Loading from '@/components/Loading'
+import { useAuth } from '@/context/auth.context'
+import { useServerStore } from '@/context/server.context'
+import { getToken } from '@/lib/auth'
+import { CENTRAL_SERVER } from '@/utils/constants'
+import { showToast } from '@/utils/ReactUtils'
+import { useEffect } from 'react'
+import {
+	Navigate,
+	Outlet,
+	useNavigate,
+	useSearchParams,
+} from 'react-router-dom'
 
 function Root() {
 	const token = getToken()
-	const [loading, setLoading] = useState(true)
-	const [serverData, setServerData] = useState<Server | null>(null)
+	const [searchParams] = useSearchParams()
+	const selectServer = useServerStore((state) => state.selectServer)
+	const { isLoading, user } = useAuth()
+	const navigate = useNavigate()
 
-	if (!token && window.location.pathname !== '/auth') {
-		console.log(`Root:check [${new Date().toISOString()}]: `, {
-			pathname: window.location.pathname,
-		})
+	useEffect(() => {
+		const claimToken = searchParams.get('token')
+
+		// If the user is logged in and has a claim token, we need to send it to the server
+		if (!isLoading && token && claimToken) {
+			const completeClaim = async () => {
+				try {
+					const res = await fetch(
+						`https://${CENTRAL_SERVER}/claim/complete`,
+						{
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${token}`, // Use the user token to authenticate the request
+							},
+							body: JSON.stringify({ claim_token: claimToken }),
+						}
+					)
+
+					if (res.ok) {
+						showToast('success', 'Server registered successfully.')
+					} else {
+						showToast('error', 'Server registration failed.')
+					}
+				} catch (error) {
+					showToast(
+						'error',
+						'Conection error with the server. Please try again.'
+					)
+				} finally {
+					// Clear the claim token from the URL
+					navigate(window.location.pathname, { replace: true })
+				}
+			}
+
+			completeClaim()
+		}
+	}, [token, searchParams, navigate, isLoading])
+
+	if (isLoading) {
+		return (
+			<div className='flex h-screen items-center justify-center'>
+				<Loading />
+			</div>
+		)
+	}
+
+	if (!user && window.location.pathname !== '/auth') {
 		return <Navigate to='/auth' replace />
 	}
 
-	useEffect(() => {
-		const loadServer = async () => {
-			try {
-				const user = await getUser()
-				const server =
-					user && user.servers && user.servers.length > 0
-						? user.servers[0]
-						: null
-
-				setServerData(server)
-				setLoading(false)
-			} catch (error) {
-				console.error('Error loading server:', error)
-				setLoading(false)
-			}
-		}
-
-		if (token) {
-			loadServer()
-		}
-	}, [token])
-
-	console.log({ token, serverData })
-
-	if (loading) {
-		return (
-			<BaseLayout>
-				<Loading />
-			</BaseLayout>
-		)
+	// Select first server if user is logged in
+	if (user && user.servers.length > 0) {
+		selectServer(user.servers[0])
 	}
 
-	// Si no hay servidor, mostrar NoServer
-	if (!serverData) {
-		return (
-			<BaseLayout>
-				<NoServer />
-			</BaseLayout>
-		)
-	}
-
-	// Si hay servidor pero estamos en la raíz, redirigir al servidor
-	if (window.location.pathname === '/') {
-		return <Navigate to={`/server/${serverData.id}/home`} replace />
-	}
-
-	return (
-		<BaseLayout>
-			<Outlet />
-		</BaseLayout>
-	)
+	return <Outlet />
 }
 
-export default memo(Root)
+export default Root

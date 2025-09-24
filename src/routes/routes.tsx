@@ -1,36 +1,44 @@
-import { Navigate, Outlet, Route, Routes, useParams } from 'react-router'
-import Root from './root'
-import SidebarLayout from '../layouts/SidebarLayout'
+import { memo, useEffect, useState } from 'react'
+import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
+import { shallow } from 'zustand/shallow'
 import Auth from '../pages/auth/Auth'
-import VideoPlayer from '../pages/videoplayer/VideoPlayer'
-import Details from '../pages/details/Details'
-import Library from '../pages/library/Library'
-import Home from '../pages/home/Home'
-import { useServerStore } from '../context/server.context'
-import { useEffect, useState } from 'react'
 import Loading from '../components/Loading'
+import { useAuth } from '../context/auth.context'
+import { useServerStore } from '../context/server.context'
 import { getUser } from '../lib/auth'
-import { Server } from '../data/interfaces/Users'
-import NoServer from '../pages/noserver/NoServer'
+import Home from '../pages/home/Home'
+import Library from '../pages/library/Library'
+import MovieDetails from '../pages/details/movie/MovieDetails'
+import SeriesDetails from '../pages/details/series/SeriesDetails'
+import AlbumDetails from '../pages/details/album/AlbumDetails'
+import CollectionDetails from '../pages/details/collection/CollectionDetails'
+import VideoPlayer from '../pages/videoplayer/VideoPlayer'
+import Root from './root'
+import SideBarLayout from '@/pages/sidebarLayout/SideBarLayout'
 
 // Wrapper for ServerRoute to handle loader logic
 function ServerRouteWrapper() {
 	const { serverId } = useParams()
-	const { selectedServer, selectServer } = useServerStore()
+	const { logout, isLoading } = useAuth()
+	const { selectedServer, selectServer } = useServerStore(
+		(state) => ({
+			selectedServer: state.selectedServer,
+			selectServer: state.selectServer,
+		}),
+		shallow
+	)
 	const [loading, setLoading] = useState(true)
 
 	useEffect(() => {
 		async function loadServer() {
-			console.log(
-				`Server/:serverId:loader [${new Date().toISOString()}]: `,
-				{
-					serverId,
-				}
-			)
 			const user = await getUser()
-			const foundServer = user?.servers.find(
-				(s: Server) => s.id === serverId
-			)
+
+			if (!isLoading && !user) {
+				logout()
+				return <Navigate to='/auth' replace />
+			}
+
+			const foundServer = user?.servers.find((s) => s.id === serverId)
 			selectServer(foundServer ?? null)
 			setLoading(false)
 		}
@@ -42,7 +50,7 @@ function ServerRouteWrapper() {
 	}
 
 	if (!selectedServer) {
-		return <Navigate to='/noserver' replace />
+		return <Navigate to='/home' replace />
 	}
 
 	return <Outlet />
@@ -53,16 +61,50 @@ export function AppRoutes() {
 		<Routes>
 			<Route path='/' element={<Root />}>
 				<Route path='/auth' element={<Auth />} />
-				<Route path='/noserver' element={<NoServer />} />
-				<Route path='server/:serverId/*' element={<ServerRouteWrapper />}>
-					<Route element={<SidebarLayout />}>
-						<Route path='home' element={<Home />} />
-						<Route path='library/:libraryId' element={<Library />} />
+				<Route index element={<Navigate to='/home' replace />} />
+				<Route element={<SideBarLayout />}>
+					<Route path='/home' element={<Home />} />
+					<Route
+						path='/server/:serverId/*'
+						element={<ServerRouteWrapper />}
+					>
+						<Route index element={<Navigate to='library' replace />} />
+						<Route
+							path='library/:libraryId/:type'
+							element={<Library />}
+						/>
+						<Route
+							path='details/movie/:movieId'
+							element={<MovieDetails />}
+						/>
+						<Route
+							path='details/series/:seriesId'
+							element={<SeriesDetails />}
+						/>
+						<Route
+							path='details/album/:albumId'
+							element={<AlbumDetails />}
+						/>
+						<Route
+							path='details/collection/:collectionId/:type'
+							element={<CollectionDetails />}
+						/>
 					</Route>
-					<Route path='details/:type/:id' element={<Details />} />
+				</Route>
+				<Route path='/server/:serverId/*' element={<ServerRouteWrapper />}>
 					<Route path='video-player/:videoId' element={<VideoPlayer />} />
 				</Route>
 			</Route>
 		</Routes>
 	)
 }
+
+// Export memoized components for consistency
+export const MemoizedHomePage = memo(Home)
+export const MemoizedLoginPage = memo(Auth)
+export const MemoizedLibraryPage = memo(Library)
+export const MemoizedMovieDetailsPage = memo(MovieDetails)
+export const MemoizedSeriesDetailsPage = memo(SeriesDetails)
+export const MemoizedAlbumDetailsPage = memo(AlbumDetails)
+export const MemoizedCollectionDetailsPage = memo(CollectionDetails)
+export const MemoizedVideoPlayerPage = memo(VideoPlayer)

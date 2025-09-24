@@ -17,7 +17,7 @@ import {
 import useDataStore from '../../context/data.context'
 import { useServerStore } from '../../context/server.context'
 import { Library } from '../../data/interfaces/Media'
-import { fetcher } from '../../utils/utils'
+import { authenticatedFetcher } from '../../utils/utils'
 import { useNavigate } from 'react-router-dom'
 import { t } from 'i18next'
 import {
@@ -47,7 +47,7 @@ export function NavLibraries() {
 
 	const { data: libraries, isLoading } = useSWR<Library[]>(
 		selectedServer ? `https://${selectedServer.ip}/libraries/` : null,
-		fetcher,
+		authenticatedFetcher,
 		{
 			revalidateOnFocus: false,
 			revalidateIfStale: false,

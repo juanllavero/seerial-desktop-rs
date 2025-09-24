@@ -7,6 +7,7 @@ import { useServerStore } from '../../../../context/server.context'
 import { Series } from '../../../../data/interfaces/Media'
 import { DropdownContent } from '../../../../data/interfaces/Utils'
 import { getOnlyYear } from '../../../../utils/utils'
+import { authenticatedFetch } from '@/lib/auth'
 
 interface SeriesCardProps {
 	series: Series
@@ -61,7 +62,7 @@ function SeriesCard({ series }: SeriesCardProps) {
 	}
 
 	const getRemainingEpisodes = async () => {
-		const response = await fetch(
+		const response = await authenticatedFetch(
 			`https://${selectedServer?.ip}/remaining-episodes?seriesId=${series.id}`
 		)
 

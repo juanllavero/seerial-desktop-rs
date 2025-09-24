@@ -4,33 +4,34 @@ import { useServerStore } from '../../context/server.context'
 import { useAuth } from '../../context/auth.context'
 import { useTranslation } from 'react-i18next'
 import useSWR from 'swr'
-import { Card } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Video } from '../../data/interfaces/Media'
-import { fetcher } from '../../utils/utils'
+import { authenticatedFetcher } from '../../utils/utils'
 import FlexBox from '../../components/ui/FlexBox'
 import ContentCard from '../../components/Card'
 
 function Home() {
-	const { serverIp } = useParams()
+	const { serverId } = useParams()
 	const { user } = useAuth()
 	const navigate = useNavigate()
 	const { t } = useTranslation()
-	const { selectServer, selectedServer } = useServerStore()
+	const { selectServer, selectedServer, serverUrl } = useServerStore()
 
 	// Get Continue Watching items
 	const { data: continueWatching, isLoading } = useSWR<Video[]>(
-		selectedServer ? `https://${selectedServer.ip}/continueWatching` : null,
-		fetcher
+		selectedServer
+			? `${serverUrl}/continueWatching?userId=${user?.id ?? null}`
+			: null,
+		authenticatedFetcher
 	)
 
 	useEffect(() => {
-		if (user && serverIp) {
+		if (user && serverId) {
 			selectServer(
-				user.servers.find((server) => server.ip === serverIp) ?? null
+				user.servers.find((server) => server.id === serverId) ?? null
 			)
 		}
-	}, [serverIp])
+	}, [serverId])
 
 	const goToContent = (url: string) => {
 		navigate(url)
@@ -45,6 +46,8 @@ function Home() {
 	return (
 		<FlexBox direction='column' justify='end' height={'100%'} gap={1}>
 			<span className='text-xl'>{t('continueWatching')}</span>
+
+			{/* <LogoIntro /> */}
 
 			<FlexBox gap={1}>
 				{continueWatching && continueWatching.length > 0

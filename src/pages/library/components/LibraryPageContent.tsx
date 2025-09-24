@@ -5,7 +5,7 @@ import { useWebSocketStore } from '../../../context/ws.context'
 import { MessageType } from '../../../data/enums/WSMessage'
 import { Library } from '../../../data/interfaces/Media'
 import { useCardWidth } from '../../../hooks/useCardWidth'
-import { fetcher } from '../../../utils/utils'
+import { authenticatedFetcher } from '../../../utils/utils'
 import LibraryPageSkeleton from './LibraryPageSkeleton'
 import LibraryContent from './LibraryContent'
 import NoContent from './NoContent'
@@ -23,7 +23,10 @@ function LibraryPageContent({ libraryId, serverIP }: LibraryPageContentProps) {
 		data: library,
 		isLoading,
 		mutate,
-	} = useSWR<Library>(`https://${serverIP}/library?id=${libraryId}`, fetcher)
+	} = useSWR<Library>(
+		`https://${serverIP}/library?id=${libraryId}`,
+		authenticatedFetcher
+	)
 
 	// Memoize library to prevent unnecessary re-renders
 	const memoizedLibrary = useMemo(() => library, [library?.id])

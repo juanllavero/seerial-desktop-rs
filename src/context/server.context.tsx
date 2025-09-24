@@ -1,58 +1,138 @@
-import { Server } from '../data/interfaces/Users'
-import { create } from 'zustand'
+import { Server } from '@/data/interfaces/Users'
+import { authenticatedFetch } from '@/lib/auth'
+import { createWithEqualityFn } from 'zustand/traditional'
 
 interface ServerState {
 	selectedServer: Server | null
+	// The final, reachable URL of the server (can be local or public)
+	serverUrl: string
 	serverStatus: boolean
 	serverVersion: string
 	gettingServerStatus: boolean
 	apiKeyStatus: boolean
 	gettingApiKeyStatus: boolean
-	selectServer: (server: Server | null) => void
+	selectServer: (server: Server | null) => Promise<void>
 	getServerStatus: () => Promise<void>
 	setApiKey: (apiKey: string) => Promise<void>
 }
 
-export const useServerStore = create<ServerState>((set, get) => ({
+/**
+ * Pings a server URL with a short timeout to see if it's reachable.
+ * Resolves with the URL if successful, otherwise rejects.
+ * @param url The URL to ping.
+ * @param timeout Milliseconds to wait before aborting.
+ */
+const pingServer = (url: string, timeout: number = 3000): Promise<string> => {
+	return new Promise((resolve, reject) => {
+		const controller = new AbortController()
+		const timeoutId = setTimeout(() => {
+			controller.abort()
+			reject(new Error(`Timeout after ${timeout}ms`))
+		}, timeout)
+
+		fetch(url, { signal: controller.signal, cache: 'no-store' })
+			.then((res) => {
+				// Any response, even an error status code, means the server is reachable.
+				// We just need to know if we can talk to it.
+				if (res) {
+					clearTimeout(timeoutId)
+					resolve(url)
+				} else {
+					throw new Error('Empty response')
+				}
+			})
+			.catch((err) => {
+				clearTimeout(timeoutId)
+				// This will catch network errors, timeouts, and SSL certificate errors.
+				reject(err)
+			})
+	})
+}
+
+export const useServerStore = createWithEqualityFn<ServerState>((set, get) => ({
 	selectedServer: null,
 	serverStatus: false,
+	serverUrl: '', // Changed from serverUrl to serverUrl for clarity
 	serverVersion: '',
-	gettingServerStatus: false,
+	gettingServerStatus: true,
 	apiKeyStatus: false,
 	gettingApiKeyStatus: false,
 
-	selectServer: (server) => {
-		set((state) => {
-			if (server?.id === state.selectedServer?.id) {
-				return state
-			}
-			return { selectedServer: server }
+	selectServer: async (server) => {
+		if (server?.id === get().selectedServer?.id) {
+			return
+		}
+
+		// Reset state immediately for better UX
+		set({
+			selectedServer: server,
+			serverUrl: '',
+			gettingServerStatus: true,
+			serverStatus: false,
+			apiKeyStatus: false,
 		})
-		get().getServerStatus()
+
+		if (!server) {
+			set({
+				gettingServerStatus: false,
+			})
+			return
+		}
+
+		const localUrl = `https://${server.ip}:${server.port}/`
+		const publicUrl = `https://${server.id}.seerial.es:${server.port}/`
+
+		console.log(`[Connection]: Pinging local URL: ${localUrl}`)
+		console.log(`[Connection]: Pinging public URL: ${publicUrl}`)
+
+		try {
+			// Promise.any resolves as soon as the FIRST promise resolves.
+			// We race the local connection against the public one.
+			const reachableUrl = await Promise.any([
+				pingServer(localUrl),
+				pingServer(publicUrl),
+			])
+
+			console.log(
+				`[Connection]: Success! Using reachable URL: ${reachableUrl}`
+			)
+			// Set the URL that won the race. Remove the trailing slash.
+			set({ serverUrl: reachableUrl.slice(0, -1) })
+			// Now get the full status from the confirmed reachable URL.
+			await get().getServerStatus()
+		} catch (error) {
+			console.error(
+				'[Connection]: Server is unreachable on both local and public URLs.',
+				error
+			)
+
+			// If the server has a tunnel, use that.
+			if (server.tunnel && server.tunnel !== '') {
+				set({ serverUrl: server.tunnel })
+				await get().getServerStatus()
+			} else {
+				set({ serverStatus: false, serverUrl: '' })
+			}
+		}
 	},
 
 	getServerStatus: async () => {
-		const { selectedServer } = get()
-		if (!selectedServer) return
+		// Use the dynamically set serverUrl from the state
+		const { serverUrl } = get()
+		if (!serverUrl) return
 
 		set({ gettingServerStatus: true })
 
-		const timeoutPromise = new Promise((_, reject) =>
-			setTimeout(
-				() => reject(new Error('Timeout: The request took too long')),
-				10000
-			)
-		)
-
-		const fetchPromise = fetch(`https://${selectedServer.ip}/`).then((res) =>
-			res.json()
-		)
-
 		try {
-			const data = await Promise.race([fetchPromise, timeoutPromise])
+			// Use a standard 10-second timeout for regular requests
+			const response = await pingServer(`${serverUrl}/`, 10000)
+			// We need to actually get the data this time
+			const data = await (await authenticatedFetch(response)).json()
+
 			set({
 				serverStatus: data.status !== undefined,
 				apiKeyStatus: data.status === 'VALID_API_KEY',
+				serverVersion: data.version || '', // Assuming your server returns a version
 				gettingApiKeyStatus: false,
 			})
 		} catch {
@@ -63,21 +143,30 @@ export const useServerStore = create<ServerState>((set, get) => ({
 	},
 
 	setApiKey: async (apiKey) => {
-		const { selectedServer } = get()
-		if (!selectedServer) return
+		// Use the dynamically set serverUrl from the state
+		const { serverUrl } = get()
+		if (!serverUrl) return
 
 		set({ gettingApiKeyStatus: true })
 
-		const response = await fetch(`https://${selectedServer.ip}/api-key`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ apiKey }),
-		})
-		const data = await response.json()
+		try {
+			const response = await authenticatedFetch(
+				`${serverUrl}/api-key`,
+				'POST',
+				{ apiKey }
+			)
+			if (!response || !response.ok) {
+				throw new Error()
+			}
+			const data = await response.json()
 
-		set({
-			apiKeyStatus: data.status === 'VALID_API_KEY',
-			gettingApiKeyStatus: false,
-		})
+			set({
+				apiKeyStatus: data.status === 'VALID_API_KEY',
+				gettingApiKeyStatus: false,
+			})
+		} catch (error) {
+			console.error('Failed to set API Key', error)
+			set({ apiKeyStatus: false, gettingApiKeyStatus: false })
+		}
 	},
 }))

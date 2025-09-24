@@ -7,9 +7,16 @@ import { useTranslation } from 'react-i18next'
 import { AuthProvider } from './context/auth.context'
 import './localization/i18n'
 import { updateAppLanguage } from './helpers/language_helpers'
+import { init, setFocus } from '@noriginmedia/norigin-spatial-navigation'
 
 function App() {
 	const { i18n } = useTranslation()
+
+	init({
+		debug: true,
+	})
+
+	setFocus('testKey')
 
 	useEffect(() => {
 		updateAppLanguage(i18n)

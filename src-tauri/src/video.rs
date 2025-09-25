@@ -19,13 +19,13 @@ impl MpvState {
 
     fn create_mpv_instance() -> Mpv {
         Mpv::with_initializer(|init| {
-            init.set_property("vo", "gpu")?;
+            init.set_property("vo", "gpu-next")?;
             init.set_property("hwdec", "auto")?;
             init.set_property("keep-open", "always")?;
             init.set_property("idle", "once")?;
             init.set_property("msg-level", "all=debug")?;
             init.set_property("log-file", "./logs/mpv_log.txt")?;
-            init.set_property("force-window", "no")?;
+            init.set_property("force-window", "no")?;   // yes to open new window for MPV
             init.set_property("wid", 0i64)?;
             Ok(())
         }).expect("Failed to initialize MPV")

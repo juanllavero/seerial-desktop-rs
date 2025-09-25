@@ -13,7 +13,7 @@
 		"windows": [
 			{
 				"title": "seerial-desktop",
-				"transparent": false,
+				"transparent": true,
 				"decorations": false,
 				"width": 800,
 				"height": 600

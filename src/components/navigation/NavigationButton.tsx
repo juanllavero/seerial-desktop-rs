@@ -5,6 +5,7 @@ import { Button } from '../ui/button'
 interface FocusableButtonProps {
 	text?: string
 	title?: string
+	className?: string
 	icon?: React.ReactElement
 	children?: React.ReactNode
 	disabled?: boolean
@@ -16,6 +17,7 @@ function FocusableButton({
 	text,
 	title,
 	icon,
+	className,
 	children,
 	disabled,
 	onClick,
@@ -30,7 +32,7 @@ function FocusableButton({
 		<Button
 			ref={ref}
 			title={title}
-			className={focused ? 'bg-stone-500' : ''}
+			className={`${className} ${focused ? 'bg-muted-foreground' : ''}`}
 			disabled={disabled}
 			onClick={onClick}
 		>

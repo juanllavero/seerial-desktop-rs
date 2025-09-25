@@ -1,134 +1,176 @@
+import { useServerStore } from '@/context/server.context'
+import { useEffect, useRef, useState } from 'react'
 import { Skeleton } from './skeleton'
-import { useServerStore } from '../../context/server.context'
-import { memo, useEffect, useMemo, useState } from 'react'
+import { isAbsolutePath } from '@/utils/ReactUtils'
 
-interface LazyImageProps {
-	src?: string
+interface ImageProps {
 	url?: string
-	alt?: string
-	width?: number | string
-	height?: number | string
-	maxHeight?: number | string
-	aspectRatio?: string
-	rounded?: boolean
-	errorSrc?: string
-	onLoad?: () => void
+	src?: string
+	fallbackSrc?: string
+	alt: string
+	aspectRatio: number
+	width?: number
+	height?: number
+	objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down'
+	style?: React.CSSProperties
 	className?: string
+	onClick?: () => void
 }
 
-function LazyImage({
-	src,
+const Image: React.FC<ImageProps> = ({
 	url,
-	alt = '',
-	width = 'auto',
-	height = 'auto',
-	aspectRatio = 'auto',
-	maxHeight,
-	rounded = false,
-	errorSrc = '/img/fileNotFound.jpg',
-	onLoad,
-	className,
-}: LazyImageProps) {
-	const { selectedServer } = useServerStore()
-	const serverIP = useMemo(() => selectedServer?.ip, [selectedServer?.ip])
+	src,
+	fallbackSrc,
+	alt,
+	aspectRatio,
+	width,
+	height,
+	style,
+	objectFit = 'cover',
+	className = '',
+	onClick,
+}) => {
+	const serverUrl = useServerStore((state) => state.serverUrl)
+	const [isLoading, setIsLoading] = useState(true)
+	const [hasError, setHasError] = useState(false)
+	const [isInView, setIsInView] = useState(false)
+	const imgRef = useRef<HTMLImageElement>(null)
+	const containerRef = useRef<HTMLDivElement>(null)
 
-	const [loaded, setLoaded] = useState(false)
 	const [imageSrc, setImageSrc] = useState(
 		url
 			? url.startsWith('http2')
 				? url
-				: `https://${serverIP}/${url.replace('resources/img', 'img')}`
-			: src ?? errorSrc
+				: url.startsWith('local')
+					? url.replace('local', '')
+					: isAbsolutePath(url)
+						? `${serverUrl}/image?path=${encodeURIComponent(url)}`
+						: `${serverUrl}/${url.replace('resources/img', 'img')}`
+			: (src ?? fallbackSrc)
 	)
-	const [hasError, setHasError] = useState(false) // New state to track errors
 
+	// Update imageSrc when url, src, or serverUrl changes
 	useEffect(() => {
+		setIsLoading(true)
+		setHasError(false)
 		const newSrc = url
 			? url.startsWith('http2')
 				? url
-				: `https://${serverIP}/${url.replace('resources/img', 'img')}`
-			: src
-		if (imageSrc !== newSrc) setImageSrc(newSrc ?? errorSrc)
-		setLoaded(false) // Reset loaded to show skeleton while loading new image
-		setHasError(false) // Reset error state
-	}, [url, src, selectedServer])
+				: url.startsWith('local')
+					? url.replace('local', '')
+					: isAbsolutePath(url)
+						? `${serverUrl}/image?path=${encodeURIComponent(url)}`
+						: `${serverUrl}/${url.replace('resources/img', 'img')}`
+			: (src ?? fallbackSrc)
+		setImageSrc(newSrc)
+	}, [url, src, serverUrl, fallbackSrc])
 
-	const containerStyles = {
-		width: width,
-		height: height === 'auto' && aspectRatio !== 'auto' ? undefined : height,
-		maxHeight: maxHeight,
-		aspectRatio: aspectRatio !== 'auto' ? aspectRatio : undefined,
-		position: 'relative' as const,
-		borderRadius: rounded ? '5px' : undefined,
+	// Intersection Observer for lazy loading
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting) {
+						setIsInView(true)
+						observer.disconnect()
+					}
+				})
+			},
+			{ threshold: 0.1 }
+		)
+
+		if (containerRef.current) {
+			observer.observe(containerRef.current)
+		}
+
+		return () => observer.disconnect()
+	}, [])
+
+	const calculateDimensions = () => {
+		if (width && !height) {
+			const calculatedHeight = Math.round(width / aspectRatio)
+			return {
+				containerClass: `w-${width} h-${calculatedHeight}`,
+				aspectRatioStyle: {},
+			}
+		} else if (height && !width) {
+			const calculatedWidth = Math.round(height * aspectRatio)
+			return {
+				containerClass: `w-${calculatedWidth} h-${height}`,
+				aspectRatioStyle: {},
+			}
+		} else if (width && height) {
+			return {
+				containerClass: `w-${width} h-${height}`,
+				aspectRatioStyle: {},
+			}
+		} else {
+			return {
+				containerClass: 'w-full',
+				aspectRatioStyle: { aspectRatio: aspectRatio.toString() },
+			}
+		}
 	}
 
-	if (imageSrc === '') {
-		return (
-			<Skeleton
-				style={{
-					width: typeof width === 'number' ? `${width}px` : '100%',
-					height:
-						typeof maxHeight === 'number' ? `${maxHeight}px` : '100%',
-				}}
-			/>
-		)
+	const { containerClass, aspectRatioStyle } = calculateDimensions()
+
+	const handleImageLoad = () => {
+		setIsLoading(false)
+	}
+
+	const handleImageError = () => {
+		if (!hasError) {
+			setHasError(true)
+			if (imgRef.current) {
+				imgRef.current.src = fallbackSrc ?? ''
+			}
+		} else {
+			setIsLoading(false)
+		}
 	}
 
 	return (
-		<div style={containerStyles} className={`relative ${className}`}>
-			{!loaded && (
-				<Skeleton
-					style={{
-						width: typeof width === 'number' ? `${width}px` : '100%',
-						height:
-							typeof maxHeight === 'number' ? `${maxHeight}px` : '100%',
-					}}
+		<div
+			ref={containerRef}
+			className={`relative overflow-hidden ${containerClass} ${className} transition-all duration-500 ease-in-out`}
+			style={aspectRatioStyle}
+			onClick={onClick}
+		>
+			{isLoading && <Skeleton className='absolute inset-0 h-full w-full' />}
+
+			{isInView && (
+				<img
+					ref={imgRef}
+					src={imageSrc}
+					alt={alt}
+					onLoad={handleImageLoad}
+					onError={handleImageError}
+					className={`h-full w-full object-${objectFit} transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'} `}
+					loading='lazy'
+					style={style}
 				/>
 			)}
-			<img
-				src={imageSrc}
-				alt={alt}
-				width={width === 'auto' ? undefined : width}
-				height={
-					maxHeight ? maxHeight : height === 'auto' ? undefined : height
-				}
-				loading='lazy'
-				style={{ borderRadius: !rounded ? '5px' : undefined }}
-				onLoad={() => {
-					setLoaded(true)
-					onLoad?.()
-				}} // Triggered when the image (original or errorSrc) loads
-				onError={() => {
-					if (!hasError && errorSrc) {
-						// Only change to errorSrc if it hasn't failed before
-						setImageSrc(errorSrc)
-						setHasError(true) // Mark that there was an error to avoid loops
-					} else {
-						setLoaded(true) // If there is no errorSrc or it has already failed, hide the skeleton
-					}
-				}}
-				className={`transition-opacity duration-300 ${
-					loaded ? 'opacity-100' : 'opacity-0'
-				} ${rounded ? 'rounded-full object-cover' : ''}`}
-			/>
+
+			{/* Fallback when every image fails */}
+			{!isLoading && hasError && (
+				<div className='absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-400'>
+					<svg
+						className='h-12 w-12'
+						fill='none'
+						stroke='currentColor'
+						viewBox='0 0 24 24'
+					>
+						<path
+							strokeLinecap='round'
+							strokeLinejoin='round'
+							strokeWidth={2}
+							d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
+						/>
+					</svg>
+				</div>
+			)}
 		</div>
 	)
 }
 
-function areEqual(prevProps: LazyImageProps, nextProps: LazyImageProps) {
-	return (
-		prevProps.src === nextProps.src &&
-		prevProps.url === nextProps.url &&
-		prevProps.alt === nextProps.alt &&
-		prevProps.width === nextProps.width &&
-		prevProps.height === nextProps.height &&
-		prevProps.maxHeight === nextProps.maxHeight &&
-		prevProps.aspectRatio === nextProps.aspectRatio &&
-		prevProps.rounded === nextProps.rounded &&
-		prevProps.errorSrc === nextProps.errorSrc &&
-		prevProps.className === nextProps.className &&
-		prevProps.onLoad === nextProps.onLoad
-	)
-}
-
-export default memo(LazyImage, areEqual)
+export default Image

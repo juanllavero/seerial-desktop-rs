@@ -1,15 +1,17 @@
 import { useServerStore } from '@/context/server.context'
 import { useEffect, useRef, useState } from 'react'
 import { Skeleton } from './skeleton'
+import { isAbsolutePath } from '@/utils/ReactUtils'
 
 interface ImageProps {
 	url?: string
 	src?: string
 	fallbackSrc?: string
-	alt: string
-	aspectRatio: number
-	width?: number
-	height?: number
+	alt?: string
+	aspectRatio?: string
+	width?: string
+	height?: string
+	objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down'
 	style?: React.CSSProperties
 	className?: string
 	onClick?: () => void
@@ -20,10 +22,11 @@ const Image: React.FC<ImageProps> = ({
 	src,
 	fallbackSrc,
 	alt,
-	aspectRatio,
+	aspectRatio = '2/3',
 	width,
 	height,
 	style,
+	objectFit = 'cover',
 	className = '',
 	onClick,
 }) => {
@@ -36,24 +39,28 @@ const Image: React.FC<ImageProps> = ({
 
 	const [imageSrc, setImageSrc] = useState(
 		url
-			? url.startsWith('http')
+			? url.startsWith('http2')
 				? url
 				: url.startsWith('local')
 					? url.replace('local', '')
-					: `https://${serverUrl}/${url.replace('resources/img', 'img')}`
+					: isAbsolutePath(url)
+						? `${serverUrl}/image?path=${encodeURIComponent(url)}`
+						: `${serverUrl}/${url.replace('resources/img', 'img')}`
 			: (src ?? fallbackSrc)
 	)
 
-	// Update imageSrc when url, src, or selectedServer changes
+	// Update imageSrc when url, src, or serverUrl changes
 	useEffect(() => {
 		setIsLoading(true)
 		setHasError(false)
 		const newSrc = url
-			? url.startsWith('http')
+			? url.startsWith('http2')
 				? url
 				: url.startsWith('local')
 					? url.replace('local', '')
-					: `https://${serverUrl}/${url.replace('resources/img', 'img')}`
+					: isAbsolutePath(url)
+						? `${serverUrl}/image?path=${encodeURIComponent(url)}`
+						: `${serverUrl}/${url.replace('resources/img', 'img')}`
 			: (src ?? fallbackSrc)
 		setImageSrc(newSrc)
 	}, [url, src, serverUrl, fallbackSrc])
@@ -79,34 +86,6 @@ const Image: React.FC<ImageProps> = ({
 		return () => observer.disconnect()
 	}, [])
 
-	const calculateDimensions = () => {
-		if (width && !height) {
-			const calculatedHeight = Math.round(width / aspectRatio)
-			return {
-				containerClass: `w-${width} h-${calculatedHeight}`,
-				aspectRatioStyle: {},
-			}
-		} else if (height && !width) {
-			const calculatedWidth = Math.round(height * aspectRatio)
-			return {
-				containerClass: `w-${calculatedWidth} h-${height}`,
-				aspectRatioStyle: {},
-			}
-		} else if (width && height) {
-			return {
-				containerClass: `w-${width} h-${height}`,
-				aspectRatioStyle: {},
-			}
-		} else {
-			return {
-				containerClass: 'w-full',
-				aspectRatioStyle: { aspectRatio: aspectRatio.toString() },
-			}
-		}
-	}
-
-	const { containerClass, aspectRatioStyle } = calculateDimensions()
-
 	const handleImageLoad = () => {
 		setIsLoading(false)
 	}
@@ -125,8 +104,12 @@ const Image: React.FC<ImageProps> = ({
 	return (
 		<div
 			ref={containerRef}
-			className={`relative overflow-hidden ${containerClass} ${className} transition-all duration-500 ease-in-out`}
-			style={aspectRatioStyle}
+			className={`relative overflow-hidden ${className} transition-all duration-500 ease-in-out`}
+			style={{
+				width,
+				height,
+				aspectRatio,
+			}}
 			onClick={onClick}
 		>
 			{isLoading && <Skeleton className='absolute inset-0 h-full w-full' />}
@@ -138,7 +121,7 @@ const Image: React.FC<ImageProps> = ({
 					alt={alt}
 					onLoad={handleImageLoad}
 					onError={handleImageError}
-					className={`h-full w-full object-cover transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'} `}
+					className={`h-full w-full object-${objectFit} transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'} `}
 					loading='lazy'
 					style={style}
 				/>

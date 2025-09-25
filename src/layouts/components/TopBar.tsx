@@ -9,9 +9,11 @@ import { authenticatedFetcher } from '@/utils/utils'
 import useSWR from 'swr'
 import FocusableButton from '@/components/navigation/NavigationButton'
 import NavigationContainer from '@/components/navigation/NavigationContainer'
+import { useNavigate } from 'react-router'
 
 function TopBar() {
 	const { logout } = useAuth()
+	const navigate = useNavigate()
 	const [showLibraries, setShowLibraries] = useState(false)
 	const [libraryType, setLibraryType] = useState<LibraryType>(
 		LibraryType.MOVIES
@@ -39,7 +41,7 @@ function TopBar() {
 
 	return (
 		<NavigationContainer
-			customFocusKey='testKey'
+			customFocusKey='topBar'
 			className='relative flex justify-between items-center w-screen px-5 py-8'
 		>
 			<div>
@@ -50,7 +52,9 @@ function TopBar() {
 				/>
 			</div>
 			<div className='flex gap-2'>
-				<FocusableButton customKey='home'>Home</FocusableButton>
+				<FocusableButton customKey='home' onClick={() => navigate('/home')}>
+					Home
+				</FocusableButton>
 				<FocusableButton
 					customKey='movies'
 					disabled={!showMovies}
@@ -87,7 +91,12 @@ function TopBar() {
 				>
 					Music
 				</FocusableButton>
-				<FocusableButton customKey='myList'>My List</FocusableButton>
+				<FocusableButton
+					customKey='myList'
+					onClick={() => navigate('/myList')}
+				>
+					My List
+				</FocusableButton>
 			</div>
 			<div>
 				<FocusableButton customKey='settings'>
@@ -99,6 +108,7 @@ function TopBar() {
 				type={libraryType}
 				libraries={libraries || []}
 				show={showLibraries}
+				hide={() => setShowLibraries(false)}
 			/>
 		</NavigationContainer>
 	)

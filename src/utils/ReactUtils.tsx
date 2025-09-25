@@ -37,6 +37,13 @@ export const showToast = (
 	}
 }
 
+export const isAbsolutePath = (pathString: string): boolean => {
+	const windowsPathRegex = /^[a-zA-Z]:[\\/]/
+	const unixPathRegex = /^\//
+
+	return windowsPathRegex.test(pathString) || unixPathRegex.test(pathString)
+}
+
 /**
  * This method is used to show a toast notification for a promise.
  * @param promise The promise to be resolved
@@ -138,7 +145,7 @@ export const getPosterImage = (collection: Collection, type: string) => {
 								? '/img/songDefault.png'
 								: '/img/fileNotFound.jpg'
 						}
-						aspectRatio={type === 'Music' ? 1 : 2 / 3}
+						aspectRatio={type === 'Music' ? '1' : '2/3'}
 					/>
 				)
 			})}

@@ -16,7 +16,7 @@ function App() {
 		debug: true,
 	})
 
-	setFocus('testKey')
+	setFocus('continueWatching')
 
 	useEffect(() => {
 		updateAppLanguage(i18n)

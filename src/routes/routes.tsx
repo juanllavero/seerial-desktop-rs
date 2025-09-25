@@ -62,8 +62,9 @@ export function AppRoutes() {
 			<Route path='/' element={<Root />}>
 				<Route path='/auth' element={<Auth />} />
 				<Route index element={<Navigate to='/home' replace />} />
+				<Route path='/home' element={<VideoPlayer />} />
 				<Route element={<SideBarLayout />}>
-					<Route path='/home' element={<Home />} />
+					<Route path='/home2' element={<Home />} />
 					<Route
 						path='/server/:serverId/*'
 						element={<ServerRouteWrapper />}

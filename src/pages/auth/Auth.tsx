@@ -138,7 +138,7 @@ export default function Auth() {
 	}
 
 	return (
-		<div className='min-h-screen bg-gradient-to-br from-blue-800 via-blue-900 to-blue-950 flex flex-col items-center justify-center px-6 py-8'>
+		<div className='min-h-screen bg-gradient-to-br from-blue-900 via-blue-950 to-black flex flex-col items-center justify-center px-6 py-8'>
 			{/* Título principal */}
 			<div className='text-center mb-16'>
 				<h1 className='text-white text-5xl md:text-6xl font-light mb-2'>

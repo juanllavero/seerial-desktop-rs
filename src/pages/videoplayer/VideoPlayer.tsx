@@ -43,7 +43,7 @@ export default function VideoPlayer() {
 	const loadVideo = async () => {
 		try {
 			await invoke('loadfile', {
-				file: 'C:/Users/juan_/Videos/Blade Runner 2049.mkv',
+				file: 'C:/Users/juan_/Videos/fmab.mkv',
 			})
 			const dur = await invoke<number>('get_duration')
 			const vol = await invoke<number>('get_volume')
@@ -116,12 +116,11 @@ export default function VideoPlayer() {
 		<div
 			style={{
 				color: 'white',
-				position: 'relative',
 				backgroundColor: 'rgba(0,0,0,0.7)',
 				padding: '10px',
 				borderRadius: '5px',
-				height: '100%',
 			}}
+			className='absolute top-10 right-10'
 		>
 			<h1>MPV Video Controls</h1>
 

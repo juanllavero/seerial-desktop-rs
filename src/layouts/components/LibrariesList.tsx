@@ -3,18 +3,23 @@ import { Library } from '@/data/interfaces/Media'
 import { LibraryType } from '@/utils/constants'
 import { motion, AnimatePresence } from 'framer-motion'
 import FocusableButton from '@/components/navigation/NavigationButton'
+import { useNavigate } from 'react-router'
+import { useServerStore } from '@/context/server.context'
 
 interface LibrariesListProps {
 	type: LibraryType
 	libraries: Library[]
 	show: boolean
+	hide: () => void
 }
 
-function LibrariesList({ type, libraries, show }: LibrariesListProps) {
+function LibrariesList({ type, libraries, show, hide }: LibrariesListProps) {
+	const navigate = useNavigate()
+	const selectedServer = useServerStore((state) => state.selectedServer)
 	if (!libraries) return null
 
 	return (
-		<NavigationContainer className='fixed flex justify-center items-center top-20 w-screen'>
+		<NavigationContainer className='fixed z-50 flex justify-center items-center top-20 w-screen'>
 			<AnimatePresence>
 				{show && (
 					<motion.div
@@ -30,6 +35,12 @@ function LibrariesList({ type, libraries, show }: LibrariesListProps) {
 								<FocusableButton
 									key={library.id}
 									customKey={library.id}
+									onClick={() => {
+										hide()
+										navigate(
+											`/server/${selectedServer?.id}/library/${library.id}/${type}`
+										)
+									}}
 								>
 									{library.name}
 								</FocusableButton>
